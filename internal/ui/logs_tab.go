@@ -7,6 +7,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/espenotterstad/iptables-tui/internal/parser"
+	"github.com/espenotterstad/iptables-tui/internal/ports"
 )
 
 // Column widths in terminal cells (content + trailing padding).
@@ -19,7 +20,7 @@ const (
 	colProto  = 7  // "ICMP"     (4) + 3 gap
 	colSrc    = 18 // IPv4 max   (15) + 3 gap
 	colDst    = 18 // same
-	colDPT    = 7  // "65535"    (5) + 2 gap
+	colDPT    = 16 // "ms-wbt-server" (13) + 3 gap
 )
 
 // arrowRune is the cursor indicator shown on the selected row.
@@ -107,10 +108,18 @@ func RenderDetailPage(e parser.LogEntry, width, height int) string {
 	field("Dst", e.Dst)
 	field("Proto", protoStyle(e.Proto).Render(e.Proto))
 	if e.SrcPort != 0 {
-		field("SrcPort", fmt.Sprintf("%d", e.SrcPort))
+		label := fmt.Sprintf("%d", e.SrcPort)
+		if name := ports.Lookup(e.SrcPort, e.Proto); name != "" {
+			label = fmt.Sprintf("%d (%s)", e.SrcPort, name)
+		}
+		field("SrcPort", label)
 	}
 	if e.DstPort != 0 {
-		field("DstPort", fmt.Sprintf("%d", e.DstPort))
+		label := fmt.Sprintf("%d", e.DstPort)
+		if name := ports.Lookup(e.DstPort, e.Proto); name != "" {
+			label = fmt.Sprintf("%d (%s)", e.DstPort, name)
+		}
+		field("DstPort", label)
 	}
 	if e.TTL != 0 {
 		field("TTL", fmt.Sprintf("%d", e.TTL))
@@ -166,14 +175,23 @@ func renderHeader() string {
 	)
 }
 
+// portLabel returns the IANA service name for the port if known, else the port
+// number as a string. Returns "" for port 0 (not present in the log entry).
+func portLabel(port int, proto string) string {
+	if port == 0 {
+		return ""
+	}
+	if name := ports.Lookup(port, proto); name != "" {
+		return name
+	}
+	return fmt.Sprintf("%d", port)
+}
+
 // renderDataRow renders a single log entry as a table row (no gutter prefix).
 func renderDataRow(e parser.LogEntry, selected bool) string {
 	action := e.Action()
 	timeStr := e.Timestamp.Format(time.TimeOnly)
-	dpt := ""
-	if e.DstPort != 0 {
-		dpt = fmt.Sprintf("%d", e.DstPort)
-	}
+	dpt := portLabel(e.DstPort, e.Proto)
 
 	if selected {
 		return StyleSelected.Render(

@@ -3,7 +3,10 @@ package ui
 import (
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
+
+	"github.com/espenotterstad/iptables-tui/internal/ports"
 )
 
 // Stats holds all running counters for the Stats tab.
@@ -61,7 +64,17 @@ func RenderStatsTab(s Stats, width int) string {
 
 	section("Top 10 Destination Ports")
 	for i, p := range topN(s.ByDstPort, 10) {
-		kv(fmt.Sprintf("%2d. port %s", i+1, p.key), fmt.Sprintf("%d", p.count))
+		portNum, _ := strconv.Atoi(p.key)
+		// Try TCP first (most common for well-known ports), then UDP.
+		name := ports.Lookup(portNum, "TCP")
+		if name == "" {
+			name = ports.Lookup(portNum, "UDP")
+		}
+		label := "port " + p.key
+		if name != "" {
+			label = fmt.Sprintf("port %s (%s)", p.key, name)
+		}
+		kv(fmt.Sprintf("%2d. %s", i+1, label), fmt.Sprintf("%d", p.count))
 	}
 
 	return sb.String()
