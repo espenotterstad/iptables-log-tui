@@ -46,8 +46,12 @@ type Model struct {
 	searching bool
 	searchInput textinput.Model
 
-	// True while the detail overlay is open.
-	showDetail bool
+	// detailOpen is true while the detail page is visible.
+	detailOpen bool
+	// detailEntry is a plain value-copy of the entry the user selected.
+	// It is never updated after being set, so incoming log lines cannot
+	// change what is displayed on the detail page.
+	detailEntry parser.LogEntry
 
 	// Running stats.
 	stats ui.Stats
@@ -129,10 +133,14 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	}
 
-	// Detail overlay: close on Esc.
-	if m.showDetail {
+	// Detail overlay: close on Esc or Enter.
+	if m.detailOpen {
 		if msg.String() == "esc" || msg.String() == "enter" {
-			m.showDetail = false
+			m.detailOpen = false
+			// Jump cursor to the latest entry so live-tail resumes naturally.
+			if len(m.filtered) > 0 {
+				m.cursor = len(m.filtered) - 1
+			}
 		}
 		return m, nil
 	}
@@ -191,8 +199,9 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				m.cursor = len(m.filtered) - 1
 			}
 		case "enter":
-			if len(m.filtered) > 0 {
-				m.showDetail = true
+			if len(m.filtered) > 0 && m.cursor < len(m.filtered) {
+				m.detailEntry = m.filtered[m.cursor] // plain value copy
+				m.detailOpen = true
 			}
 		case "d":
 			if m.filters.Action == "DROP" {
@@ -260,8 +269,9 @@ func (m *Model) addEntry(e parser.LogEntry) {
 	// Append to filtered if it passes the current filter.
 	if m.matchesFilter(e) {
 		m.filtered = append(m.filtered, e)
-		// Keep cursor at the last entry (auto-scroll).
-		if m.cursor < len(m.filtered)-1 {
+		// Auto-scroll to the latest entry, but not while the detail overlay
+		// is open — the cursor must stay frozen while the user is reading.
+		if !m.detailOpen && m.cursor < len(m.filtered)-1 {
 			m.cursor = len(m.filtered) - 1
 		}
 	}
@@ -334,7 +344,11 @@ func (m Model) View() string {
 
 	switch m.tab {
 	case TabLogs:
-		sb.WriteString(ui.RenderLogsTab(m.filtered, m.cursor, m.showDetail, m.width, contentHeight))
+		if m.detailOpen {
+			sb.WriteString(ui.RenderDetailPage(m.detailEntry, m.width, contentHeight))
+		} else {
+			sb.WriteString(ui.RenderLogsTab(m.filtered, m.cursor, m.width, contentHeight))
+		}
 	case TabStats:
 		sb.WriteString(ui.RenderStatsTab(m.stats, m.width))
 	case TabFilters:
@@ -343,9 +357,12 @@ func (m Model) View() string {
 
 	// ── Help footer ──────────────────────────────────────────────────────────
 	sb.WriteString(ui.StyleDivider.Render(strings.Repeat("─", m.width)) + "\n")
-	if m.searching {
+	switch {
+	case m.detailOpen:
+		sb.WriteString(ui.StyleHelp.Render("[Esc] or [Enter] — back to log list"))
+	case m.searching:
 		sb.WriteString("  IP filter: " + m.searchInput.View() + "  " + ui.StyleHelp.Render("[Esc/Enter] done"))
-	} else {
+	default:
 		sb.WriteString(ui.StyleHelp.Render(
 			"[d]DROP  [a]ACCEPT  [t]TCP  [u]UDP  [/]IP search  [Enter]detail  [Tab]switch  [q]quit",
 		))
