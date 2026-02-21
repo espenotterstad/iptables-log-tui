@@ -269,9 +269,10 @@ func (m *Model) addEntry(e parser.LogEntry) {
 	// Append to filtered if it passes the current filter.
 	if m.matchesFilter(e) {
 		m.filtered = append(m.filtered, e)
-		// Auto-scroll to the latest entry, but not while the detail overlay
-		// is open — the cursor must stay frozen while the user is reading.
-		if !m.detailOpen && m.cursor < len(m.filtered)-1 {
+		// Follow the tail only when the cursor was already at the bottom
+		// before this entry arrived (len-2 is the old last index).
+		// If the user has scrolled up, leave the cursor alone.
+		if !m.detailOpen && m.cursor == len(m.filtered)-2 {
 			m.cursor = len(m.filtered) - 1
 		}
 	}
