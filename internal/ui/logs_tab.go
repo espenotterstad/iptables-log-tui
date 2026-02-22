@@ -17,6 +17,7 @@ import (
 // cells so all columns line up.
 const (
 	colTime   = 11 // "15:04:05" (8) + 3 gap
+	colIn     = 9  // "eth0"     (6) + 3 gap
 	colAction = 9  // "ACCEPT"   (6) + 3 gap
 	colProto  = 7  // "ICMP"     (4) + 3 gap
 	colCat    = 12 // "Multicast" (9) + 3 gap
@@ -169,6 +170,7 @@ func renderHeader() string {
 	style := lipgloss.NewStyle().Bold(true).Foreground(ColorHeader)
 	return style.Render(
 		padCell("TIME", colTime) +
+			padCell("IN", colIn) +
 			padCell("ACTION", colAction) +
 			padCell("PROTO", colProto) +
 			padCell("CAT", colCat) +
@@ -200,6 +202,7 @@ func renderDataRow(e parser.LogEntry, selected bool, categorize func(string) str
 	if selected {
 		return StyleSelected.Render(
 			padCell(timeStr, colTime) +
+				padCell(e.In, colIn) +
 				padCell(action, colAction) +
 				padCell(e.Proto, colProto) +
 				padCell(cat, colCat) +
@@ -216,6 +219,7 @@ func renderDataRow(e parser.LogEntry, selected bool, categorize func(string) str
 	portSt := lipgloss.NewStyle().Foreground(lipgloss.Color("252"))
 
 	return timeSt.Render(padCell(timeStr, colTime)) +
+		StyleMuted.Render(padCell(e.In, colIn)) +
 		actionSt.Render(padCell(action, colAction)) +
 		protoSt.Render(padCell(e.Proto, colProto)) +
 		catStyle(cat).Render(padCell(cat, colCat)) +
