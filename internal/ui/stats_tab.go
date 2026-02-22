@@ -50,18 +50,18 @@ func RenderStatsTab(s Stats, width int) string {
 	kv("Total events", fmt.Sprintf("%d", s.Total))
 
 	section("By Action")
-	for _, action := range sortedKeys(s.ByAction) {
-		kv(action, fmt.Sprintf("%d", s.ByAction[action]))
+	for _, item := range topN(s.ByAction, len(s.ByAction)) {
+		kv(item.key, fmt.Sprintf("%d", item.count))
 	}
 
 	section("By Protocol")
-	for _, proto := range sortedKeys(s.ByProto) {
-		kv(proto, fmt.Sprintf("%d", s.ByProto[proto]))
+	for _, item := range topN(s.ByProto, len(s.ByProto)) {
+		kv(item.key, fmt.Sprintf("%d", item.count))
 	}
 
 	section("By Interface")
-	for _, iface := range sortedKeys(s.ByIface) {
-		kv(iface, fmt.Sprintf("%d", s.ByIface[iface]))
+	for _, item := range topN(s.ByIface, len(s.ByIface)) {
+		kv(item.key, fmt.Sprintf("%d", item.count))
 	}
 
 	section("Top 10 Source IPs")
@@ -89,14 +89,6 @@ func RenderStatsTab(s Stats, width int) string {
 
 type kc struct{ key string; count int }
 
-func sortedKeys(m map[string]int) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	return keys
-}
 
 func topN(m map[string]int, n int) []kc {
 	items := make([]kc, 0, len(m))
