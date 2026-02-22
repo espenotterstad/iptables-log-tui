@@ -108,7 +108,7 @@ func ParseLine(line string) (*LogEntry, error) {
 		Out:       m[5],
 		Src:       m[6],
 		Dst:       m[7],
-		Proto:     strings.ToUpper(m[8]),
+		Proto:     normalizeProto(m[8]),
 		Raw:       line,
 	}
 
@@ -126,6 +126,20 @@ func ParseLine(line string) (*LogEntry, error) {
 	}
 
 	return entry, nil
+}
+
+// protoNames maps IP protocol numbers (as logged by iptables) to their names.
+var protoNames = map[string]string{
+	"2": "IGMP",
+}
+
+// normalizeProto converts numeric protocol values to their canonical names.
+func normalizeProto(p string) string {
+	up := strings.ToUpper(p)
+	if name, ok := protoNames[up]; ok {
+		return name
+	}
+	return up
 }
 
 // parseTimestamp parses syslog-style timestamps like "Jan  2 15:04:05".
