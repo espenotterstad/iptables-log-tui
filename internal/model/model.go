@@ -7,9 +7,9 @@ import (
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/espenotterstad/iptables-tui/internal/parser"
-	"github.com/espenotterstad/iptables-tui/internal/tailer"
-	"github.com/espenotterstad/iptables-tui/internal/ui"
+	"github.com/espenotterstad/iptables-log-tui/internal/parser"
+	"github.com/espenotterstad/iptables-log-tui/internal/tailer"
+	"github.com/espenotterstad/iptables-log-tui/internal/ui"
 )
 
 // Tab indices.

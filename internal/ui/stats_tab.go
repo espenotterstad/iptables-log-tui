@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/espenotterstad/iptables-tui/internal/ports"
+	"github.com/espenotterstad/iptables-log-tui/internal/ports"
 )
 
 // Stats holds all running counters for the Stats tab.

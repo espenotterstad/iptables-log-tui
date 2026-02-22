@@ -1,4 +1,4 @@
-module github.com/espenotterstad/iptables-tui
+module github.com/espenotterstad/iptables-log-tui
 
 go 1.25.0
 

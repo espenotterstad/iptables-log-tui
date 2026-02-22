@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/espenotterstad/iptables-tui/internal/classifier"
-	"github.com/espenotterstad/iptables-tui/internal/parser"
-	"github.com/espenotterstad/iptables-tui/internal/ports"
+	"github.com/espenotterstad/iptables-log-tui/internal/classifier"
+	"github.com/espenotterstad/iptables-log-tui/internal/parser"
+	"github.com/espenotterstad/iptables-log-tui/internal/ports"
 )
 
 // Column widths in terminal cells (content + trailing padding).

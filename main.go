@@ -9,9 +9,9 @@ import (
 	"syscall"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/espenotterstad/iptables-tui/internal/classifier"
-	"github.com/espenotterstad/iptables-tui/internal/model"
-	"github.com/espenotterstad/iptables-tui/internal/tailer"
+	"github.com/espenotterstad/iptables-log-tui/internal/classifier"
+	"github.com/espenotterstad/iptables-log-tui/internal/model"
+	"github.com/espenotterstad/iptables-log-tui/internal/tailer"
 )
 
 // checkAndElevate re-execs the binary under sudo if the log file is
