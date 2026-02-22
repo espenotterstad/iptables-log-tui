@@ -7,9 +7,11 @@ import (
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/espenotterstad/iptables-log-tui/internal/classifier"
 	"github.com/espenotterstad/iptables-log-tui/internal/parser"
 	"github.com/espenotterstad/iptables-log-tui/internal/tailer"
 	"github.com/espenotterstad/iptables-log-tui/internal/ui"
+	"github.com/espenotterstad/iptables-log-tui/internal/whois"
 )
 
 // Tab indices.
@@ -24,6 +26,12 @@ type NewLineMsg string
 
 // TailerErrMsg is sent when the tailer encounters a fatal error.
 type TailerErrMsg struct{ Err error }
+
+// WhoisMsg carries the result of an async whois lookup.
+type WhoisMsg struct {
+	IP   string
+	Info whois.Result
+}
 
 // Model is the root Bubble Tea model.
 type Model struct {
@@ -65,6 +73,10 @@ type Model struct {
 	// categorize maps a source IP string to "Internal", "Multicast", or "External".
 	categorize func(string) string
 
+	// Whois cache and in-flight tracker.
+	whoisCache   map[string]whois.Result
+	whoisPending map[string]bool
+
 	// Any fatal error to display.
 	err error
 }
@@ -77,10 +89,12 @@ func New(t *tailer.Tailer, categorize func(string) string) Model {
 	ti.Width = 30
 
 	return Model{
-		stats:       ui.NewStats(),
-		tail:        t,
-		categorize:  categorize,
-		searchInput: ti,
+		stats:        ui.NewStats(),
+		tail:         t,
+		categorize:   categorize,
+		searchInput:  ti,
+		whoisCache:   make(map[string]whois.Result),
+		whoisPending: make(map[string]bool),
 	}
 }
 
@@ -109,6 +123,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.addEntry(*entry)
+		return m, nil
+
+	case WhoisMsg:
+		m.whoisCache[msg.IP] = msg.Info
+		delete(m.whoisPending, msg.IP)
 		return m, nil
 
 	case tea.KeyMsg:
@@ -206,6 +225,16 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			if len(m.filtered) > 0 && m.cursor < len(m.filtered) {
 				m.detailEntry = m.filtered[m.cursor] // plain value copy
 				m.detailOpen = true
+				src := m.detailEntry.Src
+				if m.categorize(src) == classifier.CatExternal && !m.whoisPending[src] {
+					if _, cached := m.whoisCache[src]; !cached {
+						m.whoisPending[src] = true
+						ip := src
+						return m, func() tea.Msg {
+							return WhoisMsg{IP: ip, Info: whois.Lookup(ip)}
+						}
+					}
+				}
 			}
 		case "d":
 			if m.filters.Action == "DROP" {
@@ -353,7 +382,13 @@ func (m Model) View() string {
 	switch m.tab {
 	case TabLogs:
 		if m.detailOpen {
-			sb.WriteString(ui.RenderDetailPage(m.detailEntry, m.width, contentHeight))
+			src := m.detailEntry.Src
+			var wi *whois.Result
+			if info, ok := m.whoisCache[src]; ok {
+				wi = &info
+			}
+			loading := m.whoisPending[src]
+			sb.WriteString(ui.RenderDetailPage(m.detailEntry, m.width, contentHeight, wi, loading))
 		} else {
 			sb.WriteString(ui.RenderLogsTab(m.filtered, m.cursor, m.width, contentHeight, m.categorize))
 		}

@@ -9,6 +9,7 @@ import (
 	"github.com/espenotterstad/iptables-log-tui/internal/classifier"
 	"github.com/espenotterstad/iptables-log-tui/internal/parser"
 	"github.com/espenotterstad/iptables-log-tui/internal/ports"
+	"github.com/espenotterstad/iptables-log-tui/internal/whois"
 )
 
 // Column widths in terminal cells (content + trailing padding).
@@ -83,7 +84,9 @@ func RenderLogsTab(entries []parser.LogEntry, cursor, width, height int, categor
 // RenderDetailPage renders a full-screen view of a single log entry.
 // It reads only the entry value passed in — it has no access to the live
 // filtered slice, so incoming log lines cannot affect what is displayed.
-func RenderDetailPage(e parser.LogEntry, width, height int) string {
+// whoisInfo is non-nil when a completed lookup is available; loading is true
+// while a lookup is in-flight. Both are ignored for non-External source IPs.
+func RenderDetailPage(e parser.LogEntry, width, height int, whoisInfo *whois.Result, loading bool) string {
 	var sb strings.Builder
 
 	// ── Header ──────────────────────────────────────────────────────────────
@@ -148,6 +151,30 @@ func RenderDetailPage(e parser.LogEntry, width, height int) string {
 		}
 		sb.WriteString(indent + StyleMuted.Render(chunk) + "\n")
 		raw = raw[len(chunk):]
+	}
+
+	// ── Whois section (External IPs only) ──────────────────────────────────
+	if loading || whoisInfo != nil {
+		sb.WriteByte('\n')
+		sb.WriteString(strings.Repeat(" ", gutterWidth) + StyleLabel.Render("WHOIS (src)") + "\n")
+		if loading {
+			sb.WriteString(strings.Repeat(" ", gutterWidth+2) + StyleMuted.Render("Looking up…") + "\n")
+		} else if whoisInfo != nil {
+			wfield := func(k, v string) {
+				if v == "" {
+					return
+				}
+				sb.WriteString(
+					strings.Repeat(" ", gutterWidth) +
+						StyleLabel.Render(fmt.Sprintf("%-11s", k+":")) +
+						" " + v + "\n",
+				)
+			}
+			wfield("Subnet", whoisInfo.Subnet)
+			wfield("NetName", whoisInfo.NetName)
+			wfield("ASN", whoisInfo.ASN)
+			wfield("Org", whoisInfo.Org)
+		}
 	}
 
 	// Pad to the full available height with blank lines.
