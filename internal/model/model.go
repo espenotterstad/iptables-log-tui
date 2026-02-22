@@ -264,6 +264,9 @@ func (m *Model) addEntry(e parser.LogEntry) {
 	m.stats.Total++
 	m.stats.ByAction[e.Action()]++
 	m.stats.ByProto[e.Proto]++
+	if e.In != "" {
+		m.stats.ByIface[e.In]++
+	}
 	m.stats.BySrcIP[e.Src]++
 	if e.DstPort != 0 {
 		key := fmt.Sprintf("%d", e.DstPort)

@@ -11,10 +11,11 @@ import (
 
 // Stats holds all running counters for the Stats tab.
 type Stats struct {
-	Total    int
-	ByAction map[string]int
-	ByProto  map[string]int
-	BySrcIP  map[string]int
+	Total     int
+	ByAction  map[string]int
+	ByProto   map[string]int
+	ByIface   map[string]int
+	BySrcIP   map[string]int
 	ByDstPort map[string]int
 }
 
@@ -23,6 +24,7 @@ func NewStats() Stats {
 	return Stats{
 		ByAction:  make(map[string]int),
 		ByProto:   make(map[string]int),
+		ByIface:   make(map[string]int),
 		BySrcIP:   make(map[string]int),
 		ByDstPort: make(map[string]int),
 	}
@@ -55,6 +57,11 @@ func RenderStatsTab(s Stats, width int) string {
 	section("By Protocol")
 	for _, proto := range sortedKeys(s.ByProto) {
 		kv(proto, fmt.Sprintf("%d", s.ByProto[proto]))
+	}
+
+	section("By Interface")
+	for _, iface := range sortedKeys(s.ByIface) {
+		kv(iface, fmt.Sprintf("%d", s.ByIface[iface]))
 	}
 
 	section("Top 10 Source IPs")
