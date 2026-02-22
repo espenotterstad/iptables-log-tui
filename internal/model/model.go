@@ -62,12 +62,15 @@ type Model struct {
 	// The tailer (kept for Stop on quit).
 	tail *tailer.Tailer
 
+	// categorize maps a source IP string to "Internal", "Multicast", or "External".
+	categorize func(string) string
+
 	// Any fatal error to display.
 	err error
 }
 
 // New creates and returns the initial model.
-func New(t *tailer.Tailer) Model {
+func New(t *tailer.Tailer, categorize func(string) string) Model {
 	ti := textinput.New()
 	ti.Placeholder = "IP substring…"
 	ti.CharLimit = 64
@@ -76,6 +79,7 @@ func New(t *tailer.Tailer) Model {
 	return Model{
 		stats:       ui.NewStats(),
 		tail:        t,
+		categorize:  categorize,
 		searchInput: ti,
 	}
 }
@@ -348,7 +352,7 @@ func (m Model) View() string {
 		if m.detailOpen {
 			sb.WriteString(ui.RenderDetailPage(m.detailEntry, m.width, contentHeight))
 		} else {
-			sb.WriteString(ui.RenderLogsTab(m.filtered, m.cursor, m.width, contentHeight))
+			sb.WriteString(ui.RenderLogsTab(m.filtered, m.cursor, m.width, contentHeight, m.categorize))
 		}
 	case TabStats:
 		sb.WriteString(ui.RenderStatsTab(m.stats, m.width))

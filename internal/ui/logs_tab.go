@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/espenotterstad/iptables-tui/internal/classifier"
 	"github.com/espenotterstad/iptables-tui/internal/parser"
 	"github.com/espenotterstad/iptables-tui/internal/ports"
 )
@@ -18,6 +19,7 @@ const (
 	colTime   = 11 // "15:04:05" (8) + 3 gap
 	colAction = 9  // "ACCEPT"   (6) + 3 gap
 	colProto  = 7  // "ICMP"     (4) + 3 gap
+	colCat    = 12 // "Multicast" (9) + 3 gap
 	colSrc    = 18 // IPv4 max   (15) + 3 gap
 	colDst    = 18 // same
 	colDPT    = 16 // "ms-wbt-server" (13) + 3 gap
@@ -33,7 +35,7 @@ const arrowRune = "▶"
 var gutterWidth = lipgloss.Width(arrowRune) + 1
 
 // RenderLogsTab renders the scrollable log table.
-func RenderLogsTab(entries []parser.LogEntry, cursor, width, height int) string {
+func RenderLogsTab(entries []parser.LogEntry, cursor, width, height int, categorize func(string) string) string {
 	var sb strings.Builder
 
 	// ── Column header ───────────────────────────────────────────────────────
@@ -65,7 +67,7 @@ func RenderLogsTab(entries []parser.LogEntry, cursor, width, height int) string 
 		} else {
 			prefix = strings.Repeat(" ", gutterWidth)
 		}
-		sb.WriteString(prefix + renderDataRow(entries[i], selected))
+		sb.WriteString(prefix + renderDataRow(entries[i], selected, categorize))
 		sb.WriteByte('\n')
 	}
 
@@ -169,6 +171,7 @@ func renderHeader() string {
 		padCell("TIME", colTime) +
 			padCell("ACTION", colAction) +
 			padCell("PROTO", colProto) +
+			padCell("CAT", colCat) +
 			padCell("SRC", colSrc) +
 			padCell("DST", colDst) +
 			padCell("DPT", colDPT),
@@ -188,16 +191,18 @@ func portLabel(port int, proto string) string {
 }
 
 // renderDataRow renders a single log entry as a table row (no gutter prefix).
-func renderDataRow(e parser.LogEntry, selected bool) string {
+func renderDataRow(e parser.LogEntry, selected bool, categorize func(string) string) string {
 	action := e.Action()
 	timeStr := e.Timestamp.Format(time.TimeOnly)
 	dpt := portLabel(e.DstPort, e.Proto)
+	cat := categorize(e.Src)
 
 	if selected {
 		return StyleSelected.Render(
 			padCell(timeStr, colTime) +
 				padCell(action, colAction) +
 				padCell(e.Proto, colProto) +
+				padCell(cat, colCat) +
 				padCell(e.Src, colSrc) +
 				padCell(e.Dst, colDst) +
 				padCell(dpt, colDPT),
@@ -213,9 +218,22 @@ func renderDataRow(e parser.LogEntry, selected bool) string {
 	return timeSt.Render(padCell(timeStr, colTime)) +
 		actionSt.Render(padCell(action, colAction)) +
 		protoSt.Render(padCell(e.Proto, colProto)) +
+		catStyle(cat).Render(padCell(cat, colCat)) +
 		addrSt.Render(padCell(e.Src, colSrc)) +
 		addrSt.Render(padCell(e.Dst, colDst)) +
 		portSt.Render(padCell(dpt, colDPT))
+}
+
+// catStyle returns the foreground style for an IP category string.
+func catStyle(cat string) lipgloss.Style {
+	switch cat {
+	case classifier.CatInternal:
+		return lipgloss.NewStyle().Foreground(ColorStats)
+	case classifier.CatMulticast:
+		return lipgloss.NewStyle().Foreground(ColorICMP)
+	default:
+		return StyleMuted
+	}
 }
 
 // actionStyle returns the foreground style for an action string.

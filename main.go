@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/espenotterstad/iptables-tui/internal/classifier"
 	"github.com/espenotterstad/iptables-tui/internal/model"
 	"github.com/espenotterstad/iptables-tui/internal/tailer"
 )
@@ -49,9 +50,10 @@ func main() {
 	flag.Parse()
 	checkAndElevate(*logFile)
 
+	cls := classifier.New()
 	t := tailer.New()
 
-	m := model.New(t)
+	m := model.New(t, cls.Categorize)
 
 	p := tea.NewProgram(m, tea.WithAltScreen())
 
