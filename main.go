@@ -32,14 +32,14 @@ func checkAndElevate(logFile string) {
 	sudoPath, lookErr := exec.LookPath("sudo")
 	if lookErr != nil {
 		fmt.Fprintf(os.Stderr,
-			"iptable-tui: permission denied reading %s\n"+
+			"iptables-log-tui: permission denied reading %s\n"+
 				"  Fix: sudo usermod -aG adm $USER  (then log out/in)\n", logFile)
 		os.Exit(1)
 	}
-	fmt.Fprintf(os.Stderr, "iptable-tui: permission denied reading %s — re-running with sudo\n", logFile)
+	fmt.Fprintf(os.Stderr, "iptables-log-tui: permission denied reading %s — re-running with sudo\n", logFile)
 	args := append([]string{sudoPath}, os.Args...)
 	if execErr := syscall.Exec(sudoPath, args, os.Environ()); execErr != nil {
-		fmt.Fprintf(os.Stderr, "iptable-tui: exec sudo: %v\n", execErr)
+		fmt.Fprintf(os.Stderr, "iptables-log-tui: exec sudo: %v\n", execErr)
 		os.Exit(1)
 	}
 }
@@ -78,7 +78,7 @@ func main() {
 	}()
 
 	if _, err := p.Run(); err != nil {
-		fmt.Fprintf(os.Stderr, "iptable-tui: %v\n", err)
+		fmt.Fprintf(os.Stderr, "iptables-log-tui: %v\n", err)
 		os.Exit(1)
 	}
 }

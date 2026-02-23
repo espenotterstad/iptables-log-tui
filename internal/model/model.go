@@ -1,4 +1,4 @@
-// Package model contains the root Bubble Tea model for iptable-tui.
+// Package model contains the root Bubble Tea model for iptables-log-tui.
 package model
 
 import (
@@ -368,8 +368,8 @@ func (m Model) View() string {
 		}
 		tabBar += "  "
 	}
-	title := ui.StyleTitle.Render("iptable-tui v0.1")
-	spacer := m.width - len(tabBar) - len("iptable-tui v0.1") - 2
+	title := ui.StyleTitle.Render("iptables-log-tui v0.1")
+	spacer := m.width - len(tabBar) - len("iptables-log-tui v0.1") - 2
 	if spacer < 0 {
 		spacer = 0
 	}
