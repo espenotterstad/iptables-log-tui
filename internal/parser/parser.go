@@ -76,7 +76,7 @@ func (e LogEntry) String() string {
 //
 //	(6) SRC  (7) DST  (8) PROTO  (9) SPT?  (10) DPT?
 var logLineRe = regexp.MustCompile(
-	`^(\w{3}\s+\d+\s+[\d:]+)\s+(\S+)\s+kernel:.*?\[?([^\]]*?)\]?\s+IN=(\S*)\s+OUT=(\S*)` +
+	`^(\d{4}-\d{2}-\d{2}T\S+|\w{3}\s+\d+\s+[\d:]+)\s+(\S+)\s+kernel:.*?\[?([^\]]*?)\]?\s+IN=(\S*)\s+OUT=(\S*)` +
 		`.*?SRC=(\S+)\s+DST=(\S+).*?PROTO=(\S+)` +
 		`(?:.*?SPT=(\d+))?(?:.*?DPT=(\d+))?`,
 )
@@ -103,7 +103,7 @@ func ParseLine(line string) (*LogEntry, error) {
 	entry := &LogEntry{
 		Timestamp: ts,
 		Hostname:  m[2],
-		Prefix:    strings.TrimSpace(m[3]),
+		Prefix:    strings.Trim(m[3], "[ "),
 		In:        m[4],
 		Out:       m[5],
 		Src:       m[6],
@@ -142,16 +142,24 @@ func normalizeProto(p string) string {
 	return up
 }
 
-// parseTimestamp parses syslog-style timestamps like "Jan  2 15:04:05".
-// The year is assumed to be the current year.
+// parseTimestamp parses either an ISO 8601 timestamp (ufw.log style,
+// e.g. "2026-02-22T00:00:28.257338+01:00") or a syslog-style timestamp
+// (e.g. "Jan  2 15:04:05"). For syslog format the year is assumed to be
+// the current year.
 func parseTimestamp(s string) (time.Time, error) {
-	// Normalise multiple spaces to a single space.
+	if len(s) > 0 && s[0] >= '0' && s[0] <= '9' {
+		t, err := time.Parse(time.RFC3339Nano, s)
+		if err != nil {
+			return time.Time{}, err
+		}
+		return t.In(time.Local), nil
+	}
+	// Syslog format: normalise multiple spaces then parse.
 	s = strings.Join(strings.Fields(s), " ")
 	t, err := time.Parse("Jan 2 15:04:05", s)
 	if err != nil {
 		return time.Time{}, err
 	}
-	// Attach the current year and local timezone.
 	now := time.Now()
 	return time.Date(now.Year(), t.Month(), t.Day(),
 		t.Hour(), t.Minute(), t.Second(), 0, time.Local), nil
