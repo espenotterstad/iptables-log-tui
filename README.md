@@ -63,7 +63,7 @@ installed or the lookup times out (10 s), the section is silently omitted.
 
 - Linux with iptables configured to log packets (via `LOG` target or `NFLOG`)
 - Log entries must follow the standard kernel syslog format
-- Read access to the log file (see [Permissions](#permissions) below)
+- Read access to the log file (the tool will prompt for `sudo` if needed)
 
 ## Installation
 
@@ -84,7 +84,7 @@ Go 1.21 or later is required.
 iptable-log-tui [flags]
 
 Flags:
-  --file     Path to the iptables log file (default: /var/log/iptables.log)
+  --file     Path to the log file (default: auto-detect /var/log/ufw.log or /var/log/iptables.log)
   --history  Read from the beginning of the file instead of only new entries
 ```
 
@@ -132,14 +132,12 @@ re-execute itself under `sudo` automatically.
 
 ## Permissions
 
-The log file is typically owned by `root`. Options:
+The log file is typically owned by `root`. If it is not readable by the
+current user the tool will automatically re-execute itself under `sudo`,
+prompting for your password if required. You can also invoke it with
+`sudo` directly to skip the prompt:
 
 ```sh
-# Option A — add your user to the adm group (no sudo prompt)
-sudo usermod -aG adm $USER
-# log out and back in for the change to take effect
-
-# Option B — run as root directly
 sudo ./iptable-log-tui
 ```
 
