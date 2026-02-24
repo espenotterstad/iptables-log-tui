@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"syscall"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -17,7 +18,7 @@ import (
 // checkAndElevate re-execs the binary under sudo if the log file is
 // unreadable due to permissions. It is a no-op if already running as root
 // or if the error is not permission-related.
-func checkAndElevate(logFile string) {
+func checkAndElevate(logFile string, history bool) {
 	if os.Getuid() == 0 {
 		return
 	}
@@ -36,8 +37,19 @@ func checkAndElevate(logFile string) {
 				"  Fix: sudo usermod -aG adm $USER  (then log out/in)\n", logFile)
 		os.Exit(1)
 	}
+	// Resolve symlinks immediately after the permission check so the elevated
+	// process opens the same inode, closing the TOCTOU race window. If
+	// resolution fails we fall back to the original path.
+	if resolved, resolveErr := filepath.EvalSymlinks(logFile); resolveErr == nil {
+		logFile = resolved
+	}
 	fmt.Fprintf(os.Stderr, "iptables-log-tui: permission denied reading %s — re-running with sudo\n", logFile)
-	args := append([]string{sudoPath}, os.Args...)
+	// Build args explicitly from known values rather than forwarding os.Args,
+	// so the resolved path is what sudo receives.
+	args := []string{sudoPath, os.Args[0], "--file=" + logFile}
+	if history {
+		args = append(args, "--history")
+	}
 	if execErr := syscall.Exec(sudoPath, args, os.Environ()); execErr != nil {
 		fmt.Fprintf(os.Stderr, "iptables-log-tui: exec sudo: %v\n", execErr)
 		os.Exit(1)
@@ -48,7 +60,7 @@ func main() {
 	logFile := flag.String("file", "/var/log/iptables.log", "path to the iptables log file")
 	history := flag.Bool("history", false, "read file from the beginning (include historical entries)")
 	flag.Parse()
-	checkAndElevate(*logFile)
+	checkAndElevate(*logFile, *history)
 
 	cls := classifier.New()
 	t := tailer.New()
