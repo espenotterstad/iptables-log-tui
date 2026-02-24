@@ -56,11 +56,31 @@ func checkAndElevate(logFile string, history bool) {
 	}
 }
 
+// resolveLogFile returns path if non-empty. Otherwise it probes the
+// well-known default locations in order and returns the first one found.
+// It exits with a message if no file can be located.
+func resolveLogFile(path string) string {
+	if path != "" {
+		return path
+	}
+	for _, candidate := range []string{"/var/log/ufw.log", "/var/log/iptables.log"} {
+		if _, err := os.Stat(candidate); err == nil {
+			return candidate
+		}
+	}
+	fmt.Fprintf(os.Stderr,
+		"iptables-log-tui: no log file found (tried /var/log/ufw.log, /var/log/iptables.log)\n"+
+			"  Use --file to specify a path.\n")
+	os.Exit(1)
+	return "" // unreachable
+}
+
 func main() {
-	logFile := flag.String("file", "/var/log/iptables.log", "path to the iptables log file")
+	logFile := flag.String("file", "", "path to the log file (default: auto-detect /var/log/ufw.log or /var/log/iptables.log)")
 	history := flag.Bool("history", false, "read file from the beginning (include historical entries)")
 	flag.Parse()
-	checkAndElevate(*logFile, *history)
+	file := resolveLogFile(*logFile)
+	checkAndElevate(file, *history)
 
 	cls := classifier.New()
 	t := tailer.New()
@@ -70,7 +90,7 @@ func main() {
 	p := tea.NewProgram(m, tea.WithAltScreen())
 
 	// Start the tailer and forward new lines to the Bubble Tea program.
-	t.Start(*logFile, *history)
+	t.Start(file, *history)
 	go func() {
 		for {
 			select {
