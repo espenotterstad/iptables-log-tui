@@ -368,8 +368,8 @@ func (m Model) View() string {
 		}
 		tabBar += "  "
 	}
-	title := ui.StyleTitle.Render("iptables-log-tui v0.3")
-	spacer := m.width - len(tabBar) - len("iptables-log-tui v0.3") - 2
+	title := ui.StyleTitle.Render("iptables-log-tui v0.4")
+	spacer := m.width - len(tabBar) - len("iptables-log-tui v0.4") - 2
 	if spacer < 0 {
 		spacer = 0
 	}
