@@ -41,6 +41,24 @@ var sampleLines = []struct {
 		wantDPT:   0,
 		wantAction: "ACCEPT",
 	},
+	{
+		name: "firewalld nftables reject ipv4",
+		line: `Mar 10 21:55:38 espeno-xps kernel: filter_IN_public_REJECT: IN=wlan0 OUT= MAC=ff:ff:ff:ff:ff:ff:98:06:3c:a2:4a:63:08:00 SRC=192.168.87.170 DST=192.168.87.255 LEN=63 TOS=0x00 PREC=0x00 TTL=64 ID=42197 DF PROTO=UDP SPT=50153 DPT=15600 LEN=43`,
+		wantSrc:    "192.168.87.170",
+		wantDst:    "192.168.87.255",
+		wantProto:  "UDP",
+		wantDPT:    15600,
+		wantAction: "REJECT",
+	},
+	{
+		name: "firewalld nftables reject ipv6 with hoplimit",
+		line: `Mar 10 21:55:35 espeno-xps kernel: filter_IN_public_REJECT: IN=wlan0 OUT= MAC=33:33:00:00:00:fb:78:28:ca:fb:ee:60:86:dd SRC=fe80:0000:0000:0000:7a28:caff:fefb:ee60 DST=ff02:0000:0000:0000:0000:0000:0000:00fb LEN=124 TC=0 HOPLIMIT=255 FLOWLBL=1001926 PROTO=UDP SPT=5353 DPT=5353 LEN=84`,
+		wantSrc:    "fe80:0000:0000:0000:7a28:caff:fefb:ee60",
+		wantDst:    "ff02:0000:0000:0000:0000:0000:0000:00fb",
+		wantProto:  "UDP",
+		wantDPT:    5353,
+		wantAction: "REJECT",
+	},
 }
 
 func TestParseLineSampleLines(t *testing.T) {

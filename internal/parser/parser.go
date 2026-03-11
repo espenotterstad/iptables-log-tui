@@ -81,10 +81,16 @@ var logLineRe = regexp.MustCompile(
 		`(?:.*?SPT=(\d+))?(?:.*?DPT=(\d+))?`,
 )
 
-// ttlRe and lenRe extract TTL and LEN from anywhere in the line.
+// nftPrefixRe extracts the log prefix from nftables/firewalld lines where the
+// prefix appears as "PREFIX: IN=" rather than the bracketed "[PREFIX] IN=" form
+// used by iptables/UFW.
+var nftPrefixRe = regexp.MustCompile(`kernel:\s+([A-Za-z_][A-Za-z0-9_]*):\s+IN=`)
+
+// ttlRe, hoplimitRe, and lenRe extract fields from anywhere in the line.
 var (
-	ttlRe = regexp.MustCompile(`TTL=(\d+)`)
-	lenRe = regexp.MustCompile(`\bLEN=(\d+)`)
+	ttlRe      = regexp.MustCompile(`TTL=(\d+)`)
+	hoplimitRe = regexp.MustCompile(`HOPLIMIT=(\d+)`)
+	lenRe      = regexp.MustCompile(`\bLEN=(\d+)`)
 )
 
 // ParseLine parses a single iptables log line.
@@ -100,10 +106,17 @@ func ParseLine(line string) (*LogEntry, error) {
 		return nil, fmt.Errorf("parse timestamp %q: %w", m[1], err)
 	}
 
+	prefix := strings.Trim(m[3], "[ ")
+	if prefix == "" {
+		if pm := nftPrefixRe.FindStringSubmatch(line); pm != nil {
+			prefix = pm[1]
+		}
+	}
+
 	entry := &LogEntry{
 		Timestamp: ts,
 		Hostname:  m[2],
-		Prefix:    strings.Trim(m[3], "[ "),
+		Prefix:    prefix,
 		In:        m[4],
 		Out:       m[5],
 		Src:       m[6],
@@ -120,6 +133,8 @@ func ParseLine(line string) (*LogEntry, error) {
 	}
 	if ttl := ttlRe.FindStringSubmatch(line); ttl != nil {
 		entry.TTL, _ = strconv.Atoi(ttl[1])
+	} else if hl := hoplimitRe.FindStringSubmatch(line); hl != nil {
+		entry.TTL, _ = strconv.Atoi(hl[1])
 	}
 	if ln := lenRe.FindStringSubmatch(line); ln != nil {
 		entry.Len, _ = strconv.Atoi(ln[1])
